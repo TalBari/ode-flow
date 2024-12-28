@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ODE Flow</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+        .canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        canvas {
+            background-color: #1a1a1a;
+        }
+        .control-panel {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background-color: rgba(40, 44, 52, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 2;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .control-panel:hover {
+            background-color: rgba(40, 44, 52, 1);
+        }
+
+        body.light-theme .control-panel {
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+
+        body.light-theme .control-panel:hover {
+            background-color: rgba(255, 255, 255, 1);
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 14px;
+            background-color: rgba(30, 33, 40, 0.9);
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        button {
+            width: 100%;
+            padding: 6px 8px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .help-text {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 6px;
+            line-height: 1.3;
+        }
+        .controls-container {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 2;
+        }
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+        .coords-display {
+            background-color: rgba(40, 44, 52, 0.85);
+            color: white;
+            padding: 0 12px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            font-family: monospace;
+            font-size: 14px;
+            min-width: 120px;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        body.light-theme .coords-display {
+            background-color: rgba(200, 200, 200, 0.85);
+            color: #000000;
+        }
+        .coords-input {
+            background-color: rgba(40, 44, 52, 0.85);
+            color: white;
+            padding: 0 12px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            font-family: monospace;
+            font-size: 14px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .coords-input:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .coords-input input {
+            width: 50px;
+            background: none;
+            border: none;
+            color: inherit;
+            font-family: inherit;
+            font-size: inherit;
+            text-align: center;
+            padding: 0 2px;
+        }
+
+        .coords-input input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .coords-input span {
+            opacity: 0.7;
+            padding: 0 2px;
+        }
+
+        body.light-theme .coords-input {
+            background-color: rgba(200, 200, 200, 0.85);
+            color: #000000;
+        }
+
+        .coords-input span {
+            opacity: 0.7;
+            padding: 0 2px;
+        }
+
+        body.light-theme .coords-input:hover {
+            border-color: rgba(0, 0, 0, 0.2);
+        }
+
+        body.light-theme .coords-input input:focus {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .fullscreen-btn, .home-btn, .theme-btn, .clean-btn {
+            position: static;
+            background-color: rgba(40, 44, 52, 0.85);
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: all 0.2s;
+        }
+        .fullscreen-btn:hover, .home-btn:hover, .theme-btn:hover, .clean-btn:hover {
+            background-color: rgba(50, 54, 62, 0.95);
+        }
+        .fullscreen-btn svg, .home-btn svg, .theme-btn svg, .clean-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+        .speed-control {
+            position: static;
+            background-color: rgba(40, 44, 52, 0.85);
+            border-radius: 4px;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            height: 28px;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .speed-control svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+        .speed-slider {
+            -webkit-appearance: none;
+            width: 80px;
+            height: 3px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .speed-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        .speed-slider::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .speed-slider::-moz-range-thumb:hover {
+            transform: scale(1.2);
+        }
+        body.light-theme .speed-control {
+            background-color: rgba(200, 200, 200, 0.85);
+            color: #000000;
+        }
+        body.light-theme .speed-slider {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        body.light-theme .speed-slider::-webkit-slider-thumb {
+            background: #000;
+        }
+        body.light-theme .speed-slider::-moz-range-thumb {
+            background: #000;
+        }
+        /* Light theme styles */
+        body.light-theme {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        body.light-theme .control-panel {
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+        body.light-theme input[type="text"] {
+            background-color: rgba(240, 240, 240, 0.9);
+            border: 1px solid #cccccc;
+            color: #000000;
+        }
+        body.light-theme .help-text {
+            color: #666666;
+        }
+        body.light-theme canvas {
+            background-color: #ffffff;
+        }
+        body.light-theme .fullscreen-btn,
+        body.light-theme .home-btn,
+        body.light-theme .theme-btn,
+        body.light-theme .clean-btn {
+            background-color: rgba(200, 200, 200, 0.85);
+            color: #000000;
+        }
+        body.light-theme .fullscreen-btn:hover,
+        body.light-theme .home-btn:hover,
+        body.light-theme .theme-btn:hover,
+        body.light-theme .clean-btn:hover {
+            background-color: rgba(180, 180, 180, 0.95);
+        }
+        .solver-select {
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .solver-button {
+            width: 100%;
+            padding: 8px;
+            background: rgba(60, 64, 72, 0.5);
+            border: none;
+            border-radius: 4px;
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .solver-button:hover {
+            background: rgba(70, 74, 82, 0.6);
+        }
+
+        .solver-button::after {
+            content: '▼';
+            font-size: 0.8em;
+            transition: transform 0.2s;
+        }
+
+        .solver-button.active::after {
+            transform: rotate(180deg);
+        }
+
+        .solver-options {
+            display: none;
+            position: absolute;
+            width: 100%;
+            background: rgba(45, 49, 57, 0.95);
+            border-radius: 4px;
+            margin-top: 4px;
+            z-index: 3;
+            backdrop-filter: blur(5px);
+            overflow: hidden;
+        }
+
+        .solver-options.show {
+            display: block;
+        }
+
+        .solver-option {
+            padding: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .solver-option:last-child {
+            border-bottom: none;
+        }
+
+        .solver-option:hover {
+            background: rgba(70, 74, 82, 0.6);
+        }
+
+        .solver-option.selected {
+            background: rgba(80, 84, 92, 0.8);
+        }
+
+        .solver-description {
+            font-size: 0.85em;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        body.light-theme .solver-button {
+            background: rgba(220, 220, 220, 0.5);
+        }
+
+        body.light-theme .solver-button:hover {
+            background: rgba(200, 200, 200, 0.6);
+        }
+
+        body.light-theme .solver-options {
+            background: rgba(240, 240, 240, 0.95);
+        }
+
+        body.light-theme .solver-option {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .solver-option:hover {
+            background: rgba(200, 200, 200, 0.6);
+        }
+
+        body.light-theme .solver-option.selected {
+            background: rgba(180, 180, 180, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas-container">
+        <canvas id="odeCanvas"></canvas>
+    </div>
+    <div class="control-panel" id="control-panel">
+        <input type="text" id="function-input" placeholder="Enter f(x,y) for y' = f(x,y)" value="y">
+        <button onclick="updateField()">Update Field</button>
+        <div class="help-text">
+            Functions: sin, cos, tan, asin, acos, atan, log, exp, sqrt<br>
+            Example: sin(x) + y^2
+        </div>
+        <div class="solver-select">
+            <button class="solver-button" id="solver-button">Runge-Kutta 4</button>
+            <div class="solver-options" id="solver-options">
+                <div class="solver-option selected" data-method="rk4">
+                    <div>Runge-Kutta 4</div>
+                    <div class="solver-description">4th order method. High accuracy, stable, and widely used. Best for most cases.</div>
+                </div>
+                <div class="solver-option" data-method="euler">
+                    <div>Euler</div>
+                    <div class="solver-description">1st order method. Fast but less accurate. Good for quick visualizations.</div>
+                </div>
+                <div class="solver-option" data-method="heun">
+                    <div>Heun's Method</div>
+                    <div class="solver-description">2nd order predictor-corrector. Better accuracy than Euler, less computational cost than RK4.</div>
+                </div>
+                <div class="solver-option" data-method="rk3">
+                    <div>Runge-Kutta 3</div>
+                    <div class="solver-description">3rd order method. Good balance between accuracy and speed.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="controls-container">
+        <div class="button-group">
+            <button class="fullscreen-btn" id="fullscreen-btn" title="Toggle Fullscreen">
+                <svg viewBox="0 0 24 24">
+                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                </svg>
+            </button>
+            <button class="home-btn" id="home-btn" title="Reset View">
+                <svg viewBox="0 0 24 24">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </button>
+            <button class="theme-btn" id="theme-btn" title="Toggle Theme">
+                <svg viewBox="0 0 24 24" id="theme-icon">
+                    <path d="M12,18C11.11,18 10.26,17.8 9.5,17.45C11.56,16.5 13,14.42 13,12C13,9.58 11.56,7.5 9.5,6.55C10.26,6.2 11.11,6 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31L23.31,12L20,8.69Z"/>
+                </svg>
+            </button>
+            <button class="clean-btn" id="clean-btn" title="Clear Trajectories">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="speed-control">
+            <svg viewBox="0 0 24 24">
+                <path d="M13.13 22.19L11.5 18.36C13.07 17.78 14.54 17 15.9 16.09L13.13 22.19M5.64 12.5L1.81 10.87L7.91 8.1C7 9.46 6.22 10.93 5.64 12.5M19.22 4C19.5 4 19.75 4 19.96 4.05C20.13 5.44 19.94 7.09 19.39 8.89L14.89 18C14.5 18.73 14.08 19.42 13.63 20.08L8.12 19.95C7.67 19.29 7.24 18.6 6.86 17.87L2.35 8.76C1.8 6.96 1.61 5.31 1.78 3.92C1.86 3.96 1.94 4 2 4.05C3.39 4.95 6.21 6.32 8.76 7.46L14.89 11.29C17.44 12.43 20.26 13.8 21.65 14.7C21.71 14.74 21.79 14.78 21.87 14.82C21.79 14.86 21.71 14.9 21.65 14.94C20.26 15.84 17.44 17.21 14.89 18.35L8.76 22.18C6.21 23.32 3.39 24.69 2 25.59C1.94 25.63 1.86 25.67 1.78 25.71C1.61 24.32 1.8 22.67 2.35 20.87L6.86 11.76C7.24 11.03 7.67 10.34 8.12 9.68L13.63 9.55C14.08 10.21 14.5 10.9 14.89 11.63L19.39 20.74C19.94 22.54 20.13 24.19 19.96 25.58C19.75 25.63 19.5 25.63 19.22 25.63V4Z"/>
+            </svg>
+            <input type="range" min="1" max="100" value="50" class="speed-slider" id="speed-slider" title="Flow Speed">
+        </div>
+        <div class="coords-input">
+            <span>(</span>
+            <input type="text" id="x-coord" placeholder="0" title="X coordinate">
+            <span>,</span>
+            <input type="text" id="y-coord" placeholder="0" title="Y coordinate">
+            <span>)</span>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.js"></script>
+    <script src="ode.js"></script>
+</body>
+</html>
